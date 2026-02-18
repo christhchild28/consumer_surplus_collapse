@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Consumer Surplus Over Time: Super Bowl Access</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Georgia', serif;
+    background: #fafaf8;
+    color: #1a1a1a;
+  }
+
+  #container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 20px 16px 32px;
+  }
+
+  /* ── Header ── */
+  h1 {
+    font-size: clamp(1.15rem, 3.2vw, 1.65rem);
+    font-weight: 700;
+    line-height: 1.2;
+    margin-bottom: 5px;
+  }
+
+  .subtitle {
+    font-size: clamp(0.78rem, 2vw, 0.95rem);
+    color: #555;
+    font-style: italic;
+    margin-bottom: 18px;
+  }
+
+  /* ── Controls ── */
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+
+  .slider-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    min-width: 200px;
+  }
+
+  .slider-wrap label {
+    font-size: 0.85rem;
+    white-space: nowrap;
+    font-weight: 600;
+  }
+
+  #yearSlider { flex: 1; accent-color: #1a1a1a; }
+
+  #yearDisplay {
+    font-size: 1.1rem;
+    font-weight: 700;
+    min-width: 42px;
+  }
+
+  .play-btn {
+    padding: 5px 13px;
+    border: 1.5px solid #1a1a1a;
+    background: #fff;
+    font-size: 0.78rem;
+    cursor: pointer;
+    border-radius: 2px;
+    font-family: inherit;
+    transition: background 0.15s, color 0.15s;
+    white-space: nowrap;
+  }
+  .play-btn.playing { background: #1a1a1a; color: #fff; }
+
+  /* ── Era box ── */
+  .era-box {
+    background: #f1ede6;
+    border-left: 3px solid #1a1a1a;
+    padding: 10px 14px;
+    margin-bottom: 12px;
+    min-height: 52px;
+  }
+
+  .era-title {
+    font-size: clamp(0.82rem, 2.2vw, 0.95rem);
+    font-weight: 700;
+    margin-bottom: 3px;
+  }
+
+  .era-text {
+    font-size: clamp(0.74rem, 1.8vw, 0.83rem);
+    color: #555;
+    font-style: italic;
+  }
+
+  /* ── SVG ── */
+  #svgWrap { width: 100%; margin-top: -50px; }
+  svg { display: block; width: 100%; }
+
+  /* ── Legend ── */
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 30px;
+    margin-bottom: 10px;
+    font-size: 0.78rem;
+    justify-content: center;
+  }
+
+  .legend-item { display: flex; align-items: center; gap: 5px; }
+
+  .legend-swatch {
+    width: 16px;
+    height: 16px;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+
+  /* ── Metric cards ── */
+  .metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 10px;
+    margin-top: -4px;
+  }
+
+  .metric-card {
+    padding: 14px 16px;
+    border-radius: 3px;
+    text-align: center;
+    border: 1.5px solid;
+  }
+
+  .metric-card.cs   { background: rgba(59,130,246,0.08);  border-color: #3b82f6; }
+  .metric-card.view { background: rgba(16,185,129,0.08);  border-color: #10b981; }
+  .metric-card.dwl  { background: rgba(220,38,38,0.08);   border-color: #dc2626; }
+
+  .metric-label {
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #777;
+    margin-bottom: 4px;
+    font-family: 'Georgia', serif;
+  }
+
+  .metric-value {
+    font-size: clamp(1.3rem, 4vw, 1.8rem);
+    font-weight: 700;
+    color: #1a1a1a;
+    line-height: 1;
+  }
+
+  .metric-change {
+    font-size: 0.72rem;
+    margin-top: 4px;
+    font-style: italic;
+    color: #666;
+  }
+
+  /* ── Source ── */
+  .source {
+    margin-top: 14px;
+    font-size: 0.72rem;
+    color: #888;
+  }
+</style>
+</head>
+<body>
+<div id="container">
+  <h1>The Decline of Super Bowl Consumer Surplus</h1>
+  <div class="subtitle">How technological "progress" made the most-watched event in America less accessible</div>
+
+  <div class="controls">
+    <div class="slider-wrap">
+      <label for="yearSlider">Year:</label>
+      <input type="range" id="yearSlider" min="1967" max="2026" value="1967">
+      <span id="yearDisplay">1967</span>
+    </div>
+    <button class="play-btn" id="playBtn">▶ Play</button>
+  </div>
+
+  <div class="era-box" id="eraBox">
+    <div class="era-title" id="eraTitle"></div>
+    <div class="era-text" id="eraText"></div>
+  </div>
+
+  <div class="legend">
+    <div class="legend-item">
+      <div class="legend-swatch" style="background:rgba(59,130,246,0.3);border:2px solid #3b82f6;"></div>
+      <span>Consumer Surplus</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-swatch" style="background:rgba(220,38,38,0.3);border:2px solid #dc2626;"></div>
+      <span>Deadweight Loss</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-swatch" style="background:rgba(245,158,11,0.3);border:2px solid #f59e0b;"></div>
+      <span>Lost Ad Revenue</span>
+    </div>
+  </div>
+
+  <div id="svgWrap"><svg id="chart"></svg></div>
+
+  <div class="metrics">
+    <div class="metric-card cs">
+      <div class="metric-label">Consumer Surplus</div>
+      <div class="metric-value" id="csValue">High</div>
+      <div class="metric-change" id="csChange"></div>
+    </div>
+    <div class="metric-card view">
+      <div class="metric-label">Accessible Viewers</div>
+      <div class="metric-value" id="viewersValue">100%</div>
+      <div class="metric-change" id="viewersChange"></div>
+    </div>
+    <div class="metric-card dwl">
+      <div class="metric-label">Deadweight Loss</div>
+      <div class="metric-value" id="dwlValue">None</div>
+      <div class="metric-change" id="dwlChange"></div>
+    </div>
+  </div>
+
+  <div class="source">Note: Effective price represents the marginal cost of accessing the Super Bowl broadcast via cable or streaming bundle. Consumer surplus reflects welfare above that price along a normalized linear demand curve. MC ≈ $0 represents the near-zero marginal cost of broadcasting. Sources: FCC, Nielsen, SNL Kagan, author estimates.</div>
+</div>
+
+<script>
+// ── ERA DATA ──────────────────────────────────────────────────────────────
+const eras = [
+  {
+    start: 1967, end: 1999,
+    title: 'Free Antenna Era',
+    description: 'Turn on the TV, watch for free. Zero barriers to access. Maximum consumer surplus.',
+    effectivePrice: 0,
+    accessRate: 1.0,
+    eraColor: '#10b981'
+  },
+  {
+    start: 2000, end: 2009,
+    title: 'Cable Dominance Era',
+    description: 'Most households have cable, but an antenna still works. Free access technically available to nearly all.',
+    effectivePrice: 0,
+    accessRate: 0.98,
+    eraColor: '#10b981'
+  },
+  {
+    start: 2010, end: 2014,
+    title: 'Early Cord-Cutting',
+    description: 'Streaming emerges. Some friction begins, but most can still access via cable or over-the-air antenna.',
+    effectivePrice: 15,
+    accessRate: 0.85,
+    eraColor: '#f59e0b'
+  },
+  {
+    start: 2015, end: 2019,
+    title: 'Authentication Barriers Rise',
+    description: 'Streaming requires a cable login. Cord-cutters increasingly locked out. Antennas largely forgotten.',
+    effectivePrice: 45,
+    accessRate: 0.65,
+    eraColor: '#f97316'
+  },
+  {
+    start: 2020, end: 2026,
+    title: 'The Streaming Paradox',
+    description: 'The most advanced streaming technology ever — yet authentication walls lock out millions. Maximum deadweight loss.',
+    effectivePrice: 65,
+    accessRate: 0.55,
+    eraColor: '#dc2626'
+  }
+];
+
+function getEra(year) {
+  return eras.find(e => year >= e.start && year <= e.end) || eras[0];
+}
+
+// ── CHART DIMS ────────────────────────────────────────────────────────────
+function getChartDims() {
+  const wrap = document.getElementById('svgWrap');
+  let totalW = wrap.getBoundingClientRect().width;
+  if (!totalW || totalW < 10) totalW = window.innerWidth - 32;
+  const mobile = totalW < 500;
+  const margin = mobile
+    ? { top: 28, right: 52, bottom: 52, left: 40 }
+    : { top: 38, right: 90, bottom: 64, left: 58 };
+  const w   = totalW - margin.left - margin.right;
+  const vh  = window.innerHeight;
+  const h   = mobile
+    ? Math.round(vh * 0.46) - margin.top - margin.bottom
+    : Math.round(vh * 0.55) - margin.top - margin.bottom;
+  return { totalW, w, h, margin,
+           ticksX: mobile ? 4 : 6,
+           ticksY: mobile ? 5 : 7,
+           mobile };
+}
+
+// ── SVG HELPERS ───────────────────────────────────────────────────────────
+function el(tag, attrs, parent) {
+  const e = document.createElementNS('http://www.w3.org/2000/svg', tag);
+  for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+  if (parent) parent.appendChild(e);
+  return e;
+}
+
+function svgText(content, x, y, attrs, parent) {
+  const t = el('text', { x, y, ...attrs }, parent);
+  t.textContent = content;
+  return t;
+}
+
+// White-halo label (NYT-style)
+function haloLabel(content, x, y, opts, parent) {
+  const base = {
+    'text-anchor':      opts.anchor  || 'middle',
+    'dominant-baseline': opts.baseline || 'middle',
+    'font-size':        opts.size    || '11',
+    'font-family':      'Georgia, serif',
+    'font-weight':      opts.weight  || '700',
+    'paint-order':      'stroke',
+    'stroke':           'white',
+    'stroke-width':     '4',
+    'stroke-linejoin':  'round',
+    fill:               opts.fill    || '#111'
+  };
+  return svgText(content, x, y, base, parent);
+}
+
+// ── RENDER ────────────────────────────────────────────────────────────────
+function render(year) {
+  const { totalW, w, h, margin, ticksX, ticksY, mobile } = getChartDims();
+  const maxPrice = 100;
+  const maxQ     = w;
+  const era      = getEra(year);
+  const { effectivePrice, accessRate } = era;
+
+  // qEq: where demand intersects effective price
+  const qEq = effectivePrice === 0
+    ? maxQ
+    : Math.max(0, Math.min(maxQ, maxQ * (1 - effectivePrice / maxPrice)));
+
+  function demandP(q) { return maxPrice * (1 - q / maxQ); }
+
+  // SVG
+  const svg   = document.getElementById('chart');
+  svg.innerHTML = '';
+  const svgH  = h + margin.top + margin.bottom;
+  svg.setAttribute('viewBox', `0 0 ${totalW} ${svgH}`);
+  svg.setAttribute('height', svgH);
+
+  function sx(q) { return margin.left + q; }
+  function sy(p) { return margin.top + h - (p / maxPrice) * h; }
+  function clX(v) { return Math.max(margin.left + 8, Math.min(margin.left + w - 8, v)); }
+  function clY(v) { return Math.max(margin.top  + 8, Math.min(margin.top  + h - 8, v)); }
+
+  const root = el('g', {}, svg);
+
+  // ── A) Consumer Surplus (blue triangle) ──────────────────────────────
+  // (0, maxPrice) → (qEq, effectivePrice) → (0, effectivePrice)
+  {
+    const pts = [
+      [sx(0),   sy(maxPrice)],
+      [sx(qEq), sy(effectivePrice)],
+      [sx(0),   sy(effectivePrice)]
+    ].map(p => p.join(',')).join(' ');
+
+    el('polygon', {
+      points: pts,
+      fill: '#3b82f6', 'fill-opacity': '0.3',
+      stroke: '#3b82f6', 'stroke-width': '2', 'stroke-linejoin': 'round'
+    }, root);
+
+    // centroid
+    const cx = clX((sx(0) + sx(qEq) + sx(0)) / 3);
+    const cy = clY((sy(maxPrice) + sy(effectivePrice) + sy(effectivePrice)) / 3);
+    haloLabel('Consumer Surplus', cx, cy, {}, root);
+  }
+
+  // ── B) Deadweight Loss (red triangle) ────────────────────────────────
+  // (qEq, effectivePrice) → (maxQ, 0) → (qEq, 0)
+  if (effectivePrice > 0 && qEq < maxQ - 2) {
+    const pts = [
+      [sx(qEq),  sy(effectivePrice)],
+      [sx(maxQ), sy(0)],
+      [sx(qEq),  sy(0)]
+    ].map(p => p.join(',')).join(' ');
+
+    el('polygon', {
+      points: pts,
+      fill: '#dc2626', 'fill-opacity': '0.3',
+      stroke: '#dc2626', 'stroke-width': '2', 'stroke-linejoin': 'round'
+    }, root);
+
+    if (maxQ - qEq > 24) {
+      const cx = clX((sx(qEq) + sx(maxQ) + sx(qEq)) / 3);
+      const cy = clY((sy(effectivePrice) + sy(0) + sy(0)) / 3);
+      haloLabel('Deadweight Loss', cx, cy, {}, root);
+    }
+  }
+
+  // ── C) Lost Ad Revenue (yellow rectangle) ────────────────────────────
+  // x=0 to qEq, y=0 to effectivePrice
+  if (effectivePrice > 0 && qEq > 2) {
+    el('rect', {
+      x: sx(0), y: sy(effectivePrice),
+      width: qEq, height: sy(0) - sy(effectivePrice),
+      fill: '#f59e0b', 'fill-opacity': '0.3',
+      stroke: '#f59e0b', 'stroke-width': '1.5'
+    }, root);
+
+    if (qEq > 30 && effectivePrice > 5) {
+      const cx = clX(sx(qEq / 2));
+      const cy = clY(sy(effectivePrice / 2));
+      haloLabel('Lost Ad Revenue', cx, cy, {}, root);
+    }
+  }
+
+  // ── MC ≈ $0 line ─────────────────────────────────────────────────────
+  el('line', {
+    x1: sx(0), y1: sy(0), x2: sx(maxQ), y2: sy(0),
+    stroke: '#10b981', 'stroke-width': '1.8', 'stroke-dasharray': '5,4'
+  }, root);
+
+  haloLabel('MC ≈ $0',
+    clX(sx(maxQ * 0.72)),
+    clY(sy(0) - 10),
+    { fill: '#10b981', size: mobile ? '9' : '10', baseline: 'auto' },
+    root);
+
+  // ── Demand curve ─────────────────────────────────────────────────────
+  el('line', {
+    x1: sx(0), y1: sy(maxPrice), x2: sx(maxQ), y2: sy(0),
+    stroke: '#1a1a1a', 'stroke-width': '2.5', 'stroke-linecap': 'round'
+  }, root);
+
+  haloLabel('Demand',
+    sx(maxQ) + 5,
+    sy(0) - 2,
+    { fill: '#1a1a1a', size: mobile ? '9' : '11', weight: '600', anchor: 'start', baseline: 'auto' },
+    root);
+
+  // ── Effective price line ──────────────────────────────────────────────
+  if (effectivePrice > 0) {
+    el('line', {
+      x1: sx(0), y1: sy(effectivePrice),
+      x2: sx(maxQ), y2: sy(effectivePrice),
+      stroke: '#dc2626', 'stroke-width': '1.8', 'stroke-dasharray': '6,4'
+    }, root);
+
+    haloLabel(`Effective Price: $${effectivePrice}`,
+      clX(sx(maxQ) - 4),
+      clY(sy(effectivePrice) - 9),
+      { anchor: 'end', fill: '#dc2626', size: mobile ? '8' : '10', baseline: 'auto' },
+      root);
+  }
+
+  // ── Axes ─────────────────────────────────────────────────────────────
+  el('line', { x1: sx(0), y1: sy(0), x2: sx(maxQ), y2: sy(0), stroke: '#1a1a1a', 'stroke-width': '1.5' }, root);
+  el('line', { x1: sx(0), y1: sy(0), x2: sx(0), y2: sy(maxPrice), stroke: '#1a1a1a', 'stroke-width': '1.5' }, root);
+
+  // X ticks
+  for (let i = 0; i <= ticksX; i++) {
+    const q = (i / ticksX) * maxQ;
+    const x = sx(q);
+    el('line', { x1: x, y1: sy(0), x2: x, y2: sy(0) + 5, stroke: '#1a1a1a', 'stroke-width': '1' }, root);
+    svgText(`${Math.round((i / ticksX) * 100)}%`, x, sy(0) + 16,
+      { 'text-anchor': 'middle', 'font-size': mobile ? '8' : '10', 'font-family': 'Georgia,serif', fill: '#555' }, root);
+  }
+
+  // Y ticks
+  for (let i = 0; i <= ticksY; i++) {
+    const p = (i / ticksY) * maxPrice;
+    const y = sy(p);
+    el('line', { x1: sx(0), y1: y, x2: sx(0) - 5, y2: y, stroke: '#1a1a1a', 'stroke-width': '1' }, root);
+    svgText(`$${p.toFixed(0)}`, sx(0) - 8, y,
+      { 'text-anchor': 'end', 'dominant-baseline': 'middle', 'font-size': mobile ? '8' : '10', 'font-family': 'Georgia,serif', fill: '#555' }, root);
+  }
+
+  // Axis labels
+  svgText('Potential Viewers', sx(maxQ / 2), sy(0) + (mobile ? 34 : 46),
+    { 'text-anchor': 'middle', 'font-size': mobile ? '9' : '11', 'font-family': 'Georgia,serif', fill: '#333', 'font-weight': '600' }, root);
+
+  const yLab = el('text', {
+    x: -(margin.top + h / 2), y: mobile ? 12 : 16,
+    'text-anchor': 'middle',
+    'font-size': mobile ? '9' : '11',
+    'font-family': 'Georgia,serif',
+    fill: '#333', 'font-weight': '600',
+    transform: 'rotate(-90)'
+  }, root);
+  yLab.textContent = 'Price / Willingness to Pay ($)';
+}
+
+// ── METRICS ───────────────────────────────────────────────────────────────
+function updateMetrics(era) {
+  const { accessRate } = era;
+
+  const csLevel = accessRate > 0.95 ? 'High' : accessRate > 0.75 ? 'Medium' : 'Low';
+  document.getElementById('csValue').textContent = csLevel;
+  const csDelta = ((accessRate - 1.0) * 100).toFixed(0);
+  document.getElementById('csChange').textContent = csDelta >= 0 ? 'No change from 1967' : `${csDelta}% vs. 1967`;
+
+  document.getElementById('viewersValue').textContent = `${(accessRate * 100).toFixed(0)}%`;
+  const vDelta = ((accessRate - 1.0) * 100).toFixed(0);
+  document.getElementById('viewersChange').textContent = vDelta >= 0 ? 'No change from 1967' : `${vDelta}% vs. 1967`;
+
+  const dwlPct = ((1 - accessRate) * 100).toFixed(0);
+  document.getElementById('dwlValue').textContent = dwlPct < 5 ? 'Minimal' : dwlPct < 20 ? 'Moderate' : 'High';
+  document.getElementById('dwlChange').textContent = dwlPct < 5 ? 'Nearly zero waste' : `${dwlPct}% of market locked out`;
+}
+
+// ── ERA BOX ───────────────────────────────────────────────────────────────
+function updateEraBox(era) {
+  document.getElementById('eraTitle').textContent = era.title;
+  document.getElementById('eraTitle').style.color = era.eraColor;
+  document.getElementById('eraText').textContent  = era.description;
+}
+
+// ── UPDATE ALL ────────────────────────────────────────────────────────────
+function update(year) {
+  const era = getEra(year);
+  document.getElementById('yearDisplay').textContent = year;
+  document.getElementById('yearSlider').value        = year;
+  updateEraBox(era);
+  render(year);
+  updateMetrics(era);
+}
+
+// ── CONTROLS ─────────────────────────────────────────────────────────────
+let currentYear = 1967;
+let playTimer   = null;
+
+const slider   = document.getElementById('yearSlider');
+const playBtn  = document.getElementById('playBtn');
+
+slider.addEventListener('input', e => {
+  currentYear = +e.target.value;
+  update(currentYear);
+});
+
+function startPlay() {
+  if (playTimer) return;
+  if (currentYear >= 2026) currentYear = 1967;
+  playBtn.textContent = '⏹ Stop';
+  playBtn.classList.add('playing');
+  playTimer = setInterval(() => {
+    if (currentYear >= 2026) {
+      stopPlay();
+    } else {
+      currentYear++;
+      update(currentYear);
+    }
+  }, 110);
+}
+
+function stopPlay() {
+  clearInterval(playTimer);
+  playTimer = null;
+  playBtn.textContent = '▶ Play';
+  playBtn.classList.remove('playing');
+}
+
+playBtn.addEventListener('click', () => playTimer ? stopPlay() : startPlay());
+
+// ── RESIZE ───────────────────────────────────────────────────────────────
+let resizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => render(currentYear), 120);
+});
+
+// ── INIT ─────────────────────────────────────────────────────────────────
+window.addEventListener('load', () => {
+  requestAnimationFrame(() => {
+    update(1967);
+    // Auto-play once on load
+    setTimeout(startPlay, 600);
+  });
+});
+</script>
+</body>
+</html>
